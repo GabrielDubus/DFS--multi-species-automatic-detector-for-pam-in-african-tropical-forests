@@ -10,13 +10,15 @@ This repository contains scripts to **run inference on pre-trained DFS models**
 
 DFS is based on:
 
-- **Audio Spectrogram Transformer (AST)** architecture [Gong et al., Interspeech 2021]
-- **Low-Rank Adaptation (LoRA)** for efficient fine-tuning on limited annotated datasets [Hu et al., ICLR 2022]
+- **Audio Spectrogram Transformer (AST)** architecture[1]
+- **Low-Rank Adaptation (LoRA)** for efficient fine-tuning on limited annotated datasets[2]
 - Dual-frequency models:  
   - LF (Low-Frequency) for elephant rumbles  
   - MF (Mid-Frequency) for other birds and primates
 
-DFS was trained on a combination of Sebitoli 2023 recordings (16 Song Meter Mini recorders capturing morning and afternoon vocal activity), publicly available datasets including Xeno-Canto (bird vocalizations), the Central African Primate Vocalization Dataset, and Congo Soundscapes (elephant rumbles), as well as additional species-specific datasets for chimpanzees and elephants collected in Sebitoli. The model was evaluated on independent Sebitoli 2025 recordings from new locations within the same area, covering a 6-month period.
+DFS was trained on a combination of passive acoustic data recorded in Sebitoli (North of Kibale National Park, Uganda) in 2023, publicly available datasets including Xeno-Canto[3], the Central African Primate Vocalization Dataset[4], and extracted data from Congo Soundscapes – Public Database[5], as well as additional species-specific datasets for chimpanzees and elephants collected in Sebitoli. The model was evaluated on independent Sebitoli 2025 recordings from new locations within the same forest.
+
+
 
 ## Repository Structure
 ```
@@ -62,8 +64,15 @@ Output:
 CSV files for each audio file, saved in the specified `--output_dir` (default: `outputs/`). Each CSV contains per-chunk predictions for all species.
 
 
-## Notes
-LoRA adapters are used for fine-tuning; the rest of AST is frozen.
-Supports multi-label detection (each audio chunk may contain multiple species).
-Designed for reproducible evaluation in African tropical forest datasets.
 
+## References
+
+[1]: Gong, Y., Chung, Y.-A., Glass, J., 2021. AST: Audio Spectrogram Transformer, in: Interspeech 2021. Presented at the Interspeech 2021, p. 575. https://doi.org/10.21437/Interspeech.2021-698
+
+[2]: Hu, E.J., Shen, Y., Wallis, P., Allen-Zhu, Z., Li, Y., Wang, S., Wang, L., Chen, W., 2022. LoRA: Low-Rank Adaptation of Large Language Models. ICLR 1, 3. https://doi.org/10.48550/arXiv.2106.09685
+
+[3]: https://xeno-canto.org/, visited on Jan. 2026.
+
+[4]: Zwerts, J.A., Treep, J., Kaandorp, C.S., Meewis, F., Koot, A.C., Kaya, H., 2021. Introducing a Central African Primate Vocalisation Dataset for Automated Species Classification, in: Interspeech 2021. Presented at the Interspeech 2021, ISCA, pp. 466–470. https://doi.org/10.21437/Interspeech.2021-154
+
+[5]: https://www.elephantlisteningproject.org/congo-soundscapes-public-database/, visited on Jan. 2026.
