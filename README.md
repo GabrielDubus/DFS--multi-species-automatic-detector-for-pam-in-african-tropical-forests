@@ -1,6 +1,6 @@
 # DeepForestSound (DFS)
 
-Repository accompanying: *DeepForestSound: a multi-species automatic detector for passive acoustic monitoring in African tropical forests* (IEEE).
+Repository accompanying: *DeepForestSound: a multi-species automatic detector for passive acoustic monitoring in African tropical forests*.
 
 This repository contains scripts to **run inference on pre-trained DFS models** 
 
