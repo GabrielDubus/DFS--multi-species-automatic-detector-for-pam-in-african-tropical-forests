@@ -54,10 +54,10 @@ pip install -r requirements.txt
 1. Run inference
 ```bash
 python run_inference.py \
-  --audio_dir datasets/EVAL/audio \
-  --weights_lf model_weights/eleph_mlphead.pth \
-  --weights_mf model_weights/mf11_mlphead.pth \
-  --output_dir outputs/EVAL
+  --audio_dir path/to/your/audiofiles \
+  --weights_lf model_weights/DFS_LF.pth \
+  --weights_mf model_weights/DFS_MF.pth \
+  --output_dir outputs/
 ```
 
 Output:
