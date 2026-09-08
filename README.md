@@ -1,8 +1,10 @@
 # DeepForestSound (DFS)
 
-Repository accompanying: *DeepForestSound: a multi-species automatic detector for passive acoustic monitoring in African tropical forests*.
+Repository accompanying: *DeepForestSound: a multi-species automatic detector for passive acoustic monitoring in African tropical forests*. \
+Dubus, G., d’Audiffret, T., Auger, C., Cornette, R., Haupert, S., Kasekendi, I., Katumba, R., Magaldi, H., Pernel, L., Rugonge, H., Sueur, J., Tibesigwa, J.J., Krief, S., 2026. \
+ https://doi.org/10.48550/ARXIV.2604.08087
 
-This repository contains scripts to **run inference on pre-trained DFS models** 
+This repository contains scripts to **run inference with pre-trained DFS models** 
 
 ## Background
 
@@ -63,7 +65,38 @@ python run_inference.py \
 Output:
 CSV files for each audio file, saved in the specified `--output_dir` (default: `outputs/`). Each CSV contains per-chunk predictions for all species.
 
+## GUI
 
+A standalone graphical user interface (GUI) is available for users who prefer to run DFS without using the command line.
+
+Two versions are provided:
+
+* **CPU version** — for computers without a compatible NVIDIA GPU
+* **GPU version** — recommended for computers with a compatible NVIDIA GPU, for faster inference
+
+| Version     | Download                               |
+| ----------- | -------------------------------------- |
+| **CPU** | [Download DFS GUI – CPU](https://drive.google.com/file/d/1YsK9eOL4VLuXbKJ4vF4rFLKxdpbtiPPF/view?usp=sharing) |
+| **GPU**  | [Download DFS GUI – GPU](https://drive.google.com/drive/folders/1mniVrXx8_0mgGMqVJF0fe3lV4nG9khZb?usp=sharing) |
+
+> **Note:** The GUI is provided as a standalone executable and does not require a Python installation.
+
+## Test data and example outputs
+
+To facilitate testing and allow users to verify the expected outputs, a set of **7 one-minute audio files** is provided:
+ **[Download the 7 test audio files](https://drive.google.com/drive/folders/1Fz-aaLVCL39o6YRTNeYXo_1iixI14Mgb?usp=sharing)**
+
+These files can be used directly with the DFS GUI to test the inference pipeline and compare the generated results with the provided reference outputs.
+
+Example outputs obtained with these test files are also provided: **[Download the example outputs](https://drive.google.com/drive/folders/1BYlkCeX7myPssOeSgu858mCSvCuuz6RQ?usp=sharing)**
+
+The example outputs include:
+
+* **CSV files** containing the detection results and predictions for each audio file
+* **Windowed audio files** corresponding to detected positive chunks
+* **Spectrograms** of the positive chunks
+
+These files provide reference results for checking that the GUI is correctly installed and that the inference pipeline produces the expected outputs.
 
 ## References
 
