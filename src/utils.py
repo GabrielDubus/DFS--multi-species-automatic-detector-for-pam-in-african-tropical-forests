@@ -27,7 +27,7 @@ def make_features_lf(
     if waveform.ndim > 1:
         waveform = np.mean(waveform, axis=0)
     waveform = waveform.astype(np.float32)
-    waveform = (waveform - np.mean(waveform)) / np.std(waveform)
+    waveform = (waveform - np.mean(waveform)) / max(np.std(waveform), 1e-8)
     waveform = torch.from_numpy(waveform)[None, :]
 
     fbank = torchaudio.compliance.kaldi.fbank(
@@ -72,7 +72,7 @@ def make_features_mf(
     if waveform.ndim > 1:
         waveform = np.mean(waveform, axis=0)
     waveform = waveform.astype(np.float32)
-    waveform = (waveform - np.mean(waveform)) / np.std(waveform)
+    waveform = (waveform - np.mean(waveform)) / max(np.std(waveform), 1e-8)
     waveform = torch.from_numpy(waveform)[None, :]
 
     fbank = torchaudio.compliance.kaldi.fbank(
@@ -149,7 +149,7 @@ def load_audio(wav_path, sr, offset, duration):
 
     except Exception as e:
         print(f"Failed to load {wav_path} at offset {offset}: {e}")
-        return None
+        raise
 
 
 def plot_features(feats, title="Feature", savepath="feat.png"):

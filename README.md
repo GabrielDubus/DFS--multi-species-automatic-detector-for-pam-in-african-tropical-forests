@@ -42,11 +42,13 @@ DFS-GitHub/
 
 Tested with:
 
-- Python 3.10+
-- torch >= 2.0
+- Python 3.10 or 3.11 (torch 2.1.0 is not available for Python 3.12+)
+- torch==2.1.0, torchaudio==2.1.0
 - timm==0.4.5
-- numpy, pandas, librosa, scipy, audioread, soundfile, tqdm, peft, wget, matplotlib
+- peft==0.10.0, transformers==4.40.2
+- numpy, pandas, soundfile, tqdm, wget, matplotlib
 
+Runs with or without an NVIDIA GPU.
 
 Install with:
 ```bash
@@ -62,8 +64,70 @@ python run_inference.py \
   --output_dir outputs/
 ```
 
+Main options:
+
+| Option | Default | Description |
+| ------ | ------- | ----------- |
+| `--audio_dir` | *(required)* | Folder containing the `.wav` / `.WAV` files to analyse |
+| `--output_dir` | `outputs/csv` | Folder where the CSV files are written |
+| `--weights_lf` / `--weights_mf` | `model_weights/DFS_LF.pth` / `model_weights/DFS_MF.pth` | Paths to the model weights |
+| `--device` | `auto` | `auto` (GPU if available, otherwise CPU), `cuda` or `cpu` |
+| `--duration` | `10` | Chunk duration in seconds |
+| `--hop` | `10` | Hop between chunks in seconds |
+| `--batch_size` | `16` | Number of chunks processed at once (lower it if you run out of memory) |
+
+Running on CPU is supported (about 6–10 s per one-minute file on a standard computer without GPU).
+
 Output:
-CSV files for each audio file, saved in the specified `--output_dir` (default: `outputs/`). Each CSV contains per-chunk predictions for all species.
+One CSV file per audio file, saved in `--output_dir`. Each row is one chunk, with its start and end time in seconds (`time_in`, `time_out`) and the score (0–1) of each species. The last chunk of a file is aligned on the end of the recording, so every second of audio is analysed without padding.
+
+## Suggested detection thresholds
+
+The CSV files contain raw scores between 0 and 1. To turn them into detections (presence / absence per chunk), a threshold has to be applied to each species. The following species-specific thresholds are suggested:
+
+| Species | Column name | Threshold |
+| ------- | ----------- | --------- |
+| *Loxodonta cyclotis* (African forest elephant) | `loxodonta` | 0.30 |
+| *Balearica regulorum* | `balearica_regulorum` | 0.82 |
+| *Bycanistes subcylindricus* | `bycanistes_subcylindricus` | 0.33 |
+| *Chrysococcyx cupreus* | `chrysococcyx_cupreus` | 0.10 |
+| *Colobus guereza* | `colobus_guereza` | 0.71 |
+| *Corythaeola cristata* | `corythaeola_cristata` | 0.44 |
+| *Laniarius mufumbiri* | `laniarius_mufumbiri` | 0.41 |
+| *Lophocebus albigena* | `lophocebus_albigena` | 0.80 |
+| *Pan troglodytes* | `pan_troglodytes` | 0.99 |
+| *Streptopelia semitorquata* | `streptopelia_semitorquata` | 0.20 |
+| *Tauraco schuettii* | `tauraco_schuettii` | 0.71 |
+| *Turtur tympanistria* | `turtur_tympanistria` | 0.10 |
+
+These values are a starting point. Depending on your site and objectives, you may lower a threshold to miss fewer vocalizations (more false positives) or raise it to get fewer false positives (more missed vocalizations). Checking a sample of detections by listening or looking at spectrograms is recommended.
+
+Example to apply them to the output CSV files:
+```python
+import glob
+import os
+import pandas as pd
+
+csv_dir = "outputs/csv"
+thresholds = {
+    "loxodonta": 0.30, "balearica_regulorum": 0.82, "bycanistes_subcylindricus": 0.33,
+    "chrysococcyx_cupreus": 0.10, "colobus_guereza": 0.71, "corythaeola_cristata": 0.44,
+    "laniarius_mufumbiri": 0.41, "lophocebus_albigena": 0.80, "pan_troglodytes": 0.99,
+    "streptopelia_semitorquata": 0.20, "tauraco_schuettii": 0.71, "turtur_tympanistria": 0.10,
+}
+
+detections = []
+for path in sorted(glob.glob(os.path.join(csv_dir, "*.csv"))):
+    df = pd.read_csv(path)
+    for sp, thr in thresholds.items():
+        hits = df.loc[df[sp] >= thr, ["time_in", "time_out", sp]].rename(columns={sp: "score"})
+        hits.insert(0, "species", sp)
+        hits.insert(0, "file", os.path.basename(path))
+        detections.append(hits)
+
+detections = pd.concat(detections, ignore_index=True)
+detections.to_csv(os.path.join(csv_dir, "detections.csv"), index=False)
+```
 
 ## GUI
 

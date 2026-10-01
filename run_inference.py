@@ -8,13 +8,13 @@ import os
 import glob
 import argparse
 from pathlib import Path
+from tqdm import tqdm
 
 import numpy as np
 import pandas as pd
-import audioread
+import math
+import soundfile as sf
 import torch
-from tqdm import tqdm
-
 
 from src import ast_models
 from src import utils
@@ -43,15 +43,18 @@ def parse_args():
                         help="Path to mid-frequency model weights")
 
 
-    parser.add_argument("--device", type=str, default="cuda",
-                        choices=["cuda", "cpu"],
-                        help="Computation device")
+    parser.add_argument("--device", type=str, default="auto",
+                    choices=["auto", "cuda", "cpu"],
+                    help="Computation device (auto = cuda if available, else cpu)")
 
     parser.add_argument("--duration", type=float, default=10.0,
                         help="Chunk duration in seconds")
 
     parser.add_argument("--hop", type=float, default=10.0,
                         help="Hop size between chunks in seconds")
+
+    parser.add_argument("--batch_size", type=int, default=16,
+                    help="Number of chunks processed at once")
 
     return parser.parse_args()
 
@@ -64,9 +67,13 @@ def main():
 
     args = parse_args()
 
-    DEVICE = torch.device(
-        "cuda" if args.device == "cuda" and torch.cuda.is_available() else "cpu"
-    )
+    if args.device == "cuda" and not torch.cuda.is_available():
+        print("CUDA not available, falling back to CPU.")
+    if args.device in ("auto", "cuda") and torch.cuda.is_available():
+        DEVICE = torch.device("cuda")
+    else:
+        DEVICE = torch.device("cpu")
+    print(f"Running on: {DEVICE}")
 
     os.makedirs(args.output_dir, exist_ok=True)
 
@@ -141,7 +148,10 @@ def main():
     # Inference
     # --------------------------------------------------------
 
-    audio_files = sorted(glob.glob(os.path.join(args.audio_dir, "*.wav")))
+    audio_files = sorted(
+        p for p in glob.glob(os.path.join(args.audio_dir, "*"))
+        if p.lower().endswith(".wav")
+    )
 
     for wav_path in tqdm(audio_files, desc="Running inference"):
 
@@ -150,62 +160,47 @@ def main():
             continue
 
         try:
-            total_dur = audioread.audio_open(wav_path).duration
-        except Exception:
+            total_dur = sf.info(wav_path).duration
+
+            # Number of chunks needed to cover the whole file.
+            # round(..., 3) avoids an extra chunk caused by float noise (e.g. 60.0000001 s)
+            n_chunks = max(1, math.ceil(round((total_dur - args.duration) / args.hop, 3)) + 1)
+
+            feats_lf, feats_mf, times_in, times_out = [], [], [], []
+
+            for i in range(n_chunks):
+                offset = i * args.hop
+                # Last chunk: shift it back so it ends at the end of the file
+                # (same rule as in utils.load_audio, so the reported time is the real one)
+                if offset + args.duration > total_dur:
+                    offset = max(0.0, total_dur - args.duration)
+
+                x_lf, _ = utils.load_audio(wav_path, SR_LF, offset, args.duration)
+                x_mf, _ = utils.load_audio(wav_path, SR_MF, offset, args.duration)
+
+                feats_lf.append(utils.make_features_lf(x_lf, SR_LF, MEL_BINS, TL_LF))
+                feats_mf.append(utils.make_features_mf(x_mf, SR_MF, MEL_BINS, TL_MF))
+
+                times_in.append(round(offset, 3))
+                times_out.append(round(min(offset + args.duration, total_dur), 3))
+
+            scores = []
+            with torch.no_grad():
+                for b in range(0, n_chunks, args.batch_size):
+                    X_lf = torch.stack(feats_lf[b:b + args.batch_size]).float().to(DEVICE)
+                    X_mf = torch.stack(feats_mf[b:b + args.batch_size]).float().to(DEVICE)
+
+                    y_lf = torch.sigmoid(model_lf(X_lf))
+                    y_mf = torch.sigmoid(model_mf(X_mf))
+
+                    scores.append(torch.cat([y_lf, y_mf], dim=1).float().cpu().numpy())
+            scores = np.concatenate(scores, axis=0)
+
+        except Exception as e:
+            print(f"Skipping {wav_path}: {e}")
             continue
 
-        n_chunks = max(
-            1,
-            int((total_dur - args.duration) / args.hop) + 2
-        )
-
-        feats_lf, feats_mf, times = [], [], []
-
-        for i in range(n_chunks):
-            offset = i * args.hop
-
-            x_lf, _ = utils.load_audio(
-                wav_path, SR_LF, offset, args.duration
-            )
-            x_mf, _ = utils.load_audio(
-                wav_path, SR_MF, offset, args.duration
-            )
-
-            if len(x_lf) < SR_LF * args.duration:
-                x_lf = np.pad(
-                    x_lf, (0, int(SR_LF * args.duration) - len(x_lf))
-                )
-                x_mf = np.pad(
-                    x_mf, (0, int(SR_MF * args.duration) - len(x_mf))
-                )
-
-            feats_lf.append(
-                utils.make_features_lf(
-                    x_lf, SR_LF, MEL_BINS, TL_LF
-                )
-            )
-            feats_mf.append(
-                utils.make_features_mf(
-                    x_mf, SR_MF, MEL_BINS, TL_MF
-                )
-            )
-
-            times.append(offset)
-
-        with torch.no_grad():
-            X_lf = torch.tensor(np.stack(feats_lf)).float().to(DEVICE)
-            X_mf = torch.tensor(np.stack(feats_mf)).float().to(DEVICE)
-
-            y_lf = torch.sigmoid(model_lf(X_lf))
-            y_mf = torch.sigmoid(model_mf(X_mf))
-
-            scores = torch.cat([y_lf, y_mf], dim=1).cpu().numpy()
-
-        df = pd.DataFrame({
-            "time_in": times,
-            "time_out": args.duration
-        })
-
+        df = pd.DataFrame({"time_in": times_in, "time_out": times_out})
         for i, sp in enumerate(SPECIES):
             df[sp] = scores[:, i]
 

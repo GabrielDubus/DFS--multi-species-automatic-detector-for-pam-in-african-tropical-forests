@@ -31,8 +31,6 @@ from timm.models.layers import to_2tuple,trunc_normal_
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PRE_TRAINED_DIR = os.path.join(BASE_DIR, 'pretrained_models')
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
 # override the timm package to relax the input shape constraint.
 class PatchEmbed(nn.Module):
     def __init__(self, img_size=224, patch_size=16, in_chans=3, embed_dim=768):
@@ -181,29 +179,29 @@ class ASTModel(nn.Module):
         t_dim = test_out.shape[3]
         return f_dim, t_dim
 
-    @autocast(device_type=device.type)
     def forward(self, x):
         """
         :param x: the input spectrogram, expected shape: (batch_size, time_frame_num, frequency_bins), e.g., (12, 1024, 128)
         :return: prediction
         """
-        # expect input x = (batch_size, time_frame_num, frequency_bins), e.g., (12, 1024, 128)
-        x = x.unsqueeze(1)
-        x = x.transpose(2, 3)
+        # Mixed precision only on GPU; full float32 on CPU (bf16 on CPU is slow and breaks .numpy())
+        with autocast(device_type=x.device.type, enabled=(x.device.type == "cuda")):
+            x = x.unsqueeze(1)
+            x = x.transpose(2, 3)
 
-        B = x.shape[0]
-        x = self.v.patch_embed(x)
-        cls_tokens = self.v.cls_token.expand(B, -1, -1)
-        dist_token = self.v.dist_token.expand(B, -1, -1)
-        x = torch.cat((cls_tokens, dist_token, x), dim=1)
-        x = x + self.v.pos_embed
-        x = self.v.pos_drop(x)
-        for blk in self.v.blocks:
-            x = blk(x)
-        x = self.v.norm(x)
-        x = (x[:, 0] + x[:, 1]) / 2
+            B = x.shape[0]
+            x = self.v.patch_embed(x)
+            cls_tokens = self.v.cls_token.expand(B, -1, -1)
+            dist_token = self.v.dist_token.expand(B, -1, -1)
+            x = torch.cat((cls_tokens, dist_token, x), dim=1)
+            x = x + self.v.pos_embed
+            x = self.v.pos_drop(x)
+            for blk in self.v.blocks:
+                x = blk(x)
+            x = self.v.norm(x)
+            x = (x[:, 0] + x[:, 1]) / 2
 
-        x = self.mlp_head(x)
+            x = self.mlp_head(x)
         return x
 
 if __name__ == '__main__':
