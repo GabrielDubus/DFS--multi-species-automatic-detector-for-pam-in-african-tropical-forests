@@ -1,10 +1,16 @@
 # DeepForestSound (DFS)
 
-Repository accompanying: *DeepForestSound: a multi-species automatic detector for passive acoustic monitoring in African tropical forests*. \
-Dubus, G., d’Audiffret, T., Auger, C., Cornette, R., Haupert, S., Kasekendi, I., Katumba, R., Magaldi, H., Pernel, L., Rugonge, H., Sueur, J., Tibesigwa, J.J., Krief, S., 2026. \
- https://doi.org/10.48550/ARXIV.2604.08087
+Repository accompanying the paper *DeepForestSound: A Multi-Species Automatic Detector for Passive Acoustic Monitoring in African Tropical Forests.*
 
-This repository contains scripts to **run inference with pre-trained DFS models** 
+Dubus, G., d’Audiffret, T., Auger, C., Cornette, R., Haupert, S., Kasekendi, I., Katumba, R., Magaldi, H., Pernel, L., Rugonge, H., Sueur, J., Tibesigwa, J. J., Krief, S., 2026.
+
+https://doi.org/10.48550/arXiv.2604.08087
+
+This repository is released under the CC BY-NC-SA 4.0 license and is developed by an academic team at the French National Museum of Natural History (MNHN) as part of the One Forest Vision initiative (OFVi).
+
+If you use the DeepForestSound model, please cite the accompanying publication.
+
+This repository contains scripts for running inference with pre-trained DFS models.
 
 ## Background
 
